@@ -1,0 +1,40 @@
+name: .NET CI
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.0.x
+
+    - name: Build and Test all solutions
+      run: |
+        # Находим все .sln файлы и выполняем для каждого команды
+        # '|| exit 1' нужен, чтобы при ошибке CI сразу падал, а не продолжал работу
+        
+        find . -type f -name "*.sln" | while read solution; do
+            echo "========================================================"
+            echo "Processing solution: $solution"
+            echo "========================================================"
+            
+            echo "1. Restore..."
+            dotnet restore "$solution" || exit 1
+            
+            echo "2. Build..."
+            dotnet build "$solution" --configuration Release --no-restore || exit 1
+            
+            echo "3. Test..."
+            dotnet test "$solution" --configuration Release --no-build --verbosity normal || exit 1
+        done
